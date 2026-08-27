@@ -1,0 +1,90 @@
+{
+  "case39": {
+    "node_acc": 0.9893,
+    "pool": "max",
+    "oracle_flip_would_help": false,
+    "oracle_flipped_AUROC": 0.3972,
+    "AUROC_mean_pool": [
+      0.6775,
+      0.0146
+    ],
+    "AUROC_max_pool": [
+      0.6962,
+      0.0583
+    ],
+    "overall_seed0": {
+      "AUROC": 0.6028,
+      "AUPR": 0.9233,
+      "FPR95": 1.0
+    },
+    "overall": {
+      "AUROC": [
+        0.6962,
+        0.0583
+      ],
+      "AUPR": [
+        0.9441,
+        0.0125
+      ],
+      "FPR95": [
+        0.992,
+        0.016
+      ]
+    },
+    "by_cell": {
+      "topo-near": 0.5073,
+      "topo-far": 0.5931,
+      "load-near": 0.8311,
+      "load-far": 1.0,
+      "gen-near": 0.3872,
+      "gen-far": 0.558,
+      "sensor-near": 0.4776,
+      "sensor-far": 0.2915,
+      "compound-far": 0.7794
+    }
+  },
+  "case118": {
+    "node_acc": 0.7095,
+    "pool": "max",
+    "oracle_flip_would_help": false,
+    "oracle_flipped_AUROC": 0.4452,
+    "AUROC_mean_pool": [
+      0.2475,
+      0.0079
+    ],
+    "AUROC_max_pool": [
+      0.4238,
+      0.0846
+    ],
+    "overall_seed0": {
+      "AUROC": 0.5548,
+      "AUPR": 0.8922,
+      "FPR95": 0.98
+    },
+    "overall": {
+      "AUROC": [
+        0.4238,
+        0.0846
+      ],
+      "AUPR": [
+        0.8576,
+        0.0282
+      ],
+      "FPR95": [
+        0.996,
+        0.008
+      ]
+    },
+    "by_cell": {
+      "topo-near": 0.5245,
+      "topo-far": 0.5397,
+      "load-near": 0.3931,
+      "load-far": 0.7999,
+      "gen-near": 0.4624,
+      "gen-far": 0.7231,
+      "sensor-near": 0.5042,
+      "sensor-far": 0.4529,
+      "compound-far": 0.593
+    }
+  }
+}

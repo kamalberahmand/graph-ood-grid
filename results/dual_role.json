@@ -1,0 +1,18 @@
+{
+  "case39": {
+    "S_OOD_AUROC": 0.9975,
+    "S_OOD_AUROC_std": 0.0006,
+    "S_sev_AUROC": 0.9497,
+    "S_sev_AUROC_std": 0.0014,
+    "PhysOnly_AUROC": 0.7727,
+    "PhysOnly_AUROC_std": 0.0
+  },
+  "case118": {
+    "S_OOD_AUROC": 0.9958,
+    "S_OOD_AUROC_std": 0.0003,
+    "S_sev_AUROC": 0.9194,
+    "S_sev_AUROC_std": 0.0021,
+    "PhysOnly_AUROC": 0.7847,
+    "PhysOnly_AUROC_std": 0.0
+  }
+}
