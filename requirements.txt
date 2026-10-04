@@ -1,6 +1,8 @@
-# Versions used for every number reported in the paper (Python 3.11).
+# Versions used to produce every number in the paper (Python 3.11, CPU only).
 numpy==2.4.4
-scipy==1.16.3
+scipy==1.17.1
 pandas==2.3.3
-pandapower==3.5.4
+scikit-learn==1.8.0
+pandapower==3.5.5
+numba==0.68.0
 matplotlib==3.10.9

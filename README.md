@@ -1,89 +1,109 @@
-# Beyond Detection: Severity, Attribution, and Physical Risk of Graph Distribution Shift in Power Grids
+# Severity-Aware Out-of-Distribution Detection for Graph Learning in Power Systems
 
-Anonymous code release for the AI4PowerGrids @ NeurIPS 2026 submission of the same name.
+Code and result files for the paper
 
-This repository contains the data generator, the model, every experiment script, and the
-result files that each table and figure in the paper is read from. No number in the paper
-is typed by hand: each one is traceable to a file in `results/`.
+> K. Berahmand, S. Forouzandeh, N. Al Khafaf, L. Tamang, A. Kamoona, and M. Jalili,
+> "Severity-Aware Out-of-Distribution Detection for Graph Learning in Power Systems,"
+> submitted to *IEEE Transactions on Smart Grid*.
 
-```
-code/        data generator, model, experiments, figure scripts
-results/     JSON / NPZ outputs that the paper and the figures read
-```
+The framework extends a post-hoc graph OOD detector with (i) a severity score that fuses
+representation and physics deviations, (ii) counterfactual cause attribution by reverting
+each candidate factor and re-solving the AC power flow, and (iii) evaluation against
+base-case constraint violations and full N-1 screening. Experiments use the IEEE 39-bus,
+IEEE 118-bus and PEGASE 1354-bus systems with generator reactive-power limits enforced.
+
+Every number in the paper's tables is written by `make_tables.py` from the JSON files in
+`results/`; nothing is typed by hand.
 
 ## Install
 
-```
+```bash
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Python 3.11 with numpy 2.4, scipy 1.16, pandas 2.3, pandapower 3.5, matplotlib 3.10.
-There is no GPU or deep-learning framework dependency: the GNN encoder is implemented
-directly in NumPy (`code/gnn.py`) with manual backpropagation, so everything runs on a
-plain CPU install in a few minutes per system.
+Python 3.11, CPU only. There is no deep-learning framework dependency: the graph
+convolutional autoencoder is implemented in NumPy with manual backpropagation (`gnn.py`).
 
-## Reproduce
+## Quick start: regenerate the tables and figures from the shipped results
 
-```
-cd code
-python gridgen.py case39 case118   # simulate the dataset -> ../data/*.pkl  (~660 MB)
-python run2.py                     # Table 1, Table A2, attribution -> ../results/all_results_v2.json
-python dual_role.py                # detection AUROC of S_OOD / S_sev / D_p -> ../results/dual_role.json
-python gnnsafe.py                  # GNNSafe comparator -> ../results/gnnsafe.json
-python misspec.py                  # attribution under a misspecified operator -> ../results/misspec.json
-python n1.py                       # N-1 post-contingency screening -> ../results/n1.json
-python fig1_build.py               # figures; add --plot-only to redraw from cached arrays
-python fig2_build.py
-python fig3_build.py
+`results/` already contains every file the paper reads, so the tables and figures can be
+rebuilt in under a minute without simulating anything:
+
+```bash
+python triage.py                 # Table VI (screening prioritization)
+python make_tables.py            # tables/*.tex
+python fig1_build.py --plot-only # Fig. 1
+python fig_tradeoff.py           # Fig. 2
+python fig_n1.py                 # Fig. 3
+python fig_sens.py               # Fig. 4
 ```
 
-`data/` and `results/` are expected as siblings of `code/`. The simulated graphs
-(~660 MB) are not shipped, but `results/` already holds every file the figures and the
-paper need, so `fig*_build.py --plot-only` reproduces all three figures without
-regenerating them. Every script is seeded; `run2.py` and `dual_role.py` average encoder
-seeds 0–4 and `run2.py` also reports paired-bootstrap intervals.
+## Full reproduction
 
-## What each file does
+```bash
+./run_all.sh                       # all three systems
+./run_all.sh case39 case118        # IEEE systems only (about 1-2 h on two cores)
+```
 
-`gridgen.py` builds the shift taxonomy on the IEEE 39- and 118-bus MATPOWER cases through
-pandapower. Every sample is a converged AC power-flow solution with `enforce_q_lims=True`.
-Voltage limits are the per-bus limits shipped with the case; IEEE-118's placeholder branch
-ratings are replaced by reference ratings that place the nominal point at 60 % loading
-without touching any power-flow parameter, since the shipped values make the overload rate
-identically zero. Physical risk is `R_phys = 0.5 r_V + 0.5 r_F` over lines and
-transformers. The module also generates the counterfactual reversion samples used for
-attribution, and records the fraction of draws discarded because the power flow diverged.
+`run_all.sh` simulates the datasets into `data/` (about 1.6 GB for the three systems, not
+shipped), runs every experiment, and rebuilds `tables/` and `figs/`. PEGASE-1354 takes
+about a day on a two-core machine, mostly for data generation and the 1430-outage N-1
+screening. All scripts are seeded. Set `OMP_NUM_THREADS=1`: the per-sample linear algebra
+is small and multithreaded BLAS only adds contention.
 
-`framework.py` is the detect / quantify / attribute model: the split
-structural-operational representation, the Ledoit–Wolf-shrunk Mahalanobis scores, the
-saturating severity transform `phi(d) = d/(d+m)`, and the counterfactual attribution
-weights. `gnn.py` is the NumPy GNN autoencoder underneath it.
+As a check, `python run2.py case39` on the generated IEEE-39 data reproduces the reported
+detection AUROC (0.9965 ± 0.0009) and rho(S_sev, CVI) = 0.765 exactly.
 
-`run2.py` produces the detection tables, the severity–risk correlations, the `lambda_p`
-sweep and the idealized attribution numbers. `dual_role.py` measures how well `S_OOD`,
-`S_sev` and `D_p` each detect, which is the detection half of the trade-off plotted in
-Figure 2(a) and tabulated in Table A3.
+## Files
 
-`gnnsafe.py` is the GNNSafe comparator: a bus-type node classifier plus energy belief
-propagation (`K=2`, `alpha=0.5`), scored in the canonical orientation only — the sign is
-never chosen by looking at test AUROC.
-
-`misspec.py` degrades the reversion operator's nominal model by `delta` and re-measures
-top-1 attribution; this is the experiment that removes the circularity of an idealized
-reversion, where reverting an inactive factor is a literal no-op. `n1.py` screens
-single-line outages and relates base-state severity to post-contingency risk.
-
-## Where each reported number lives
-
-| Paper location | File | Key |
+| File | Role | Paper |
 |---|---|---|
-| Table 1 (per-cell AUROC, IEEE-118) | `results/all_results_v2.json` | `detection_by_cell` |
-| Table A2 (overall detection, both systems) | `results/all_results_v2.json`, `results/gnnsafe.json` | `detection_overall`, `overall` |
-| Table A3 (detect / rank trade-off) | `results/dual_role.json`, `results/all_results_v2.json` | `*_AUROC`, `severity_vs_risk` |
-| Bootstrap CI on `rho(D_p) - rho(S_sev)` | `results/all_results_v2.json` | `Dp_minus_Ssev_rho_CI95` |
-| `lambda_p` sweep (App. A.4) | `results/all_results_v2.json` | `lambda_p_sweep` |
-| Attribution, idealized and compound | `results/all_results_v2.json` | `attribution` |
-| Table A4 (misspecified operator) | `results/misspec.json` | per-`delta` accuracy |
-| Table A5 and the N-1 correlations | `results/n1.json` | `by_cell`, `rho_*` |
-| Table A1 (divergence rates) | `results/all_results_v2.json` | `reject_rate` |
-| GNNSafe per-cell (App. C.1) | `results/gnnsafe.json` | `by_cell` |
+| `gridgen.py` | Shift taxonomy, AC power flow with Q limits, convergence diagnosis (`solve_diag`), reference ratings, loadability (`nose_point`), counterfactual reversion samples | Sec. III-A, IV-D, V-A, V-B; Tables I, II, VII |
+| `gnn.py` | NumPy GCN autoencoder; sparse propagation for large systems | Sec. IV-A |
+| `framework.py` | Structural descriptor, Ledoit-Wolf Mahalanobis scores, severity score with phi(d)=d/(d+m), attribution, baselines | Sec. IV-A to IV-C |
+| `run2.py` | Detection (5 seeds), severity vs. CVI, lambda_p sweep, bootstrap intervals, attribution | Table III, Sec. V-D, V-E, V-H, V-J |
+| `dual_role.py` | Detection AUROC of S_OOD, S_sev and D_p over 5 seeds | Table III, Fig. 2(a) |
+| `sensitivity.py` | Fusion weights, CVI composition w, reference-rating level, all detectors vs. CVI | Fig. 4, Sec. V-I |
+| `misspec.py` | Attribution with an inaccurate reversion operator (model error delta) | Fig. 2(b), Sec. V-H |
+| `n1_full.py` | Full N-1 screening over all non-islanding single-branch outages | Tables IV, V, Fig. 3, Sec. V-F |
+| `triage.py` | Screening prioritization (R@20, E90) | Table VI, Sec. V-G |
+| `gnnsafe.py`, `gnnsafe_rho.py` | GNNSafe comparator and its rank correlation with the CVI | Table III, Appendix B |
+| `timing.py` | Fit, scoring and power-flow times | Sec. V-C |
+| `make_tables.py` | Writes `tables/*.tex` from `results/` | all result tables |
+| `fig*.py` | Figures 1 to 4 | Figs. 1-4 |
+
+## Results files
+
+| File | Contents |
+|---|---|
+| `all_results_v2.json` | Detection per shift type, severity-consequence correlations, attribution, convergence classes (`solve_diag`) |
+| `case*_v2.json` | The same, one file per system |
+| `dual_role.json` | Five-seed AUROC of S_OOD, S_sev, D_p |
+| `sensitivity.json` | Sensitivity grids and every detector against the CVI |
+| `misspec.json` | Attribution accuracy against model error delta |
+| `n1_full.json` | Per-point N-1 indices (`rows`), per-shift-type means (`by_cell`), Spearman rho values |
+| `triage.json` | Screening prioritization metrics |
+| `gnnsafe.json`, `gnnsafe_rho.json` | GNNSafe AUROC and rho |
+| `timing.json` | Computational cost |
+| `fig1_real.npz` | Data behind Fig. 1 |
+
+## Notes on the implementation
+
+* **Constraint-violation index.** In the code the CVI is stored as `Rphys["R_phys"]`
+  (an earlier name); it is `0.5 r_V + 0.5 r_F` over buses and over in-service lines and
+  transformers, as in Definition 4 of the paper.
+* **Convergence diagnosis.** `gridgen.solve_diag` classifies every power flow, in the base
+  case and after each contingency, as `ok`, `ok_retry` (numerical, kept),
+  `qlim_infeasible` or `collapse`. A flat start is never used.
+* **Ratings.** Placeholder rating classes (all IEEE-118 branches, PEGASE transformers) are
+  replaced by reference ratings that put the nominal point at 60% loading. No power-flow
+  parameter is changed.
+* **PEGASE load bands** are scaled by `gridgen.LOAD_MARGIN_SCALE` (0.605) so that they sit
+  at the same fractions of the loadability margin as on IEEE-39.
+* **Large systems.** Above 500 buses the adjacency and the GCN propagation operator are
+  sparse, and the spectral descriptor is cached by topology.
+
+## License
+
+MIT (see `LICENSE`).
